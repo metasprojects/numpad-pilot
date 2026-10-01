@@ -4,6 +4,8 @@
   "version": "0.1.0",
   "private": true,
   "description": "Windows Reels overlay for borderless War Thunder",
+  "author": "metasprojects",
+  "homepage": "https://github.com/metasprojects/numpad-pilot",
   "license": "MIT",
   "main": "src/main.cjs",
   "scripts": {
@@ -12,12 +14,31 @@
     "instagram-check": "electron . --instagram-check",
     "integration-check": "electron . --integration-check",
     "action-check": "electron . --action-check",
+    "dist:win": "electron-builder --win nsis",
     "test": "node --test"
   },
   "devDependencies": {
-    "electron": "44.5.1"
+    "electron": "44.5.1",
+    "electron-builder": "^26.0.20"
   },
   "dependencies": {
     "koffi": "^3.3.2"
+  },
+  "build": {
+    "appId": "io.github.metasprojects.numpadpilot",
+    "productName": "Numpad Pilot",
+    "files": ["src/**/*", "assets/**/*", "package.json"],
+    "asarUnpack": ["node_modules/koffi/**"],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Numpad Pilot"
+    }
   }
 }

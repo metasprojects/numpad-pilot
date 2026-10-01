@@ -4,20 +4,26 @@
 
 A Windows-only Instagram Reels overlay for playing War Thunder in **borderless windowed** mode on one monitor. The play view shows just the Reel video and its on-video caption. The Instagram action rail remains in the page, outside the visible crop, so shortcuts can operate it. This project is unaffiliated with Gaijin, BattlEye, and Meta.
 
-## Run
+## Install on Windows
 
-Install Node.js, then in this directory:
+The Windows installer creates **Numpad Pilot** shortcuts on the desktop and in the Start menu. Double-click the installer, choose where to install it, then launch the app from either shortcut. Sign in to Instagram in the app on first use. Set War Thunder to **borderless windowed** mode.
+
+The installer is being tested locally and is not yet posted as a GitHub release. If you are building from source, install Node.js and run:
 
 ```powershell
-npm install
-npm start
+npm ci
+npm run dist:win
 ```
+
+Then open `dist\Numpad Pilot Setup 0.1.0.exe`. To run the source directly, use `npm start` after `npm ci`.
+
+## First use
 
 Sign in directly in the Instagram window if prompted. Your login stays in Electron's persistent local browser session. The project does not request or store your Instagram password. If the play view is cropped before you sign in, use numpad decimal to open interaction mode, then sign in. The tray icon provides Settings and Quit.
 
 If you used the earlier Reel Overlay build, Numpad Pilot copies its local profile on first launch so your Instagram sign-in and settings carry over. The original profile remains in place as a backup.
 
-Set War Thunder to **borderless windowed**. Exclusive fullscreen may cover ordinary desktop windows. The overlay starts near the right edge and passes mouse input through during play. In interaction mode, drag its top-right grip or resize the window; press Escape to return to the game. The window remembers its size and position.
+Exclusive fullscreen may cover ordinary desktop windows. The overlay starts near the right edge and passes mouse input through during play. In interaction mode, drag its top-right grip or resize the window; press Escape to return to the game. The window remembers its size and position.
 
 | Key | Action |
 | --- | --- |
