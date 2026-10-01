@@ -1,0 +1,50 @@
+# Reel Overlay
+
+A Windows-only Instagram Reels overlay for playing War Thunder in **borderless windowed** mode on one monitor. The play view shows just the Reel video and its on-video caption. The Instagram action rail remains in the page, outside the visible crop, so shortcuts can operate it. This project is unaffiliated with Gaijin, BattlEye, and Meta.
+
+## Run
+
+Install Node.js, then in this directory:
+
+```powershell
+npm install
+npm start
+```
+
+Sign in directly in the Instagram window if prompted. Your login stays in Electron's persistent local browser session. The project does not request or store your Instagram password. If the play view is cropped before you sign in, use numpad decimal to open interaction mode, then sign in. The tray icon provides Settings and Quit.
+
+Set War Thunder to **borderless windowed**. Exclusive fullscreen may cover ordinary desktop windows. The overlay starts near the right edge and passes mouse input through during play. In interaction mode, drag its top-right grip or resize the window; press Escape to return to the game. The window remembers its size and position.
+
+| Key | Action |
+| --- | --- |
+| Numpad 8 / 2 | Previous / next Reel |
+| Numpad 5 | Pause / play |
+| Numpad 4 / 6 | Reel volume down / up |
+| Numpad 7 / 9 | Opacity down / up |
+| Numpad + | Like, only if not already liked |
+| Numpad - | Unlike, only if already liked |
+| Numpad / | Open comment field; type and submit yourself |
+| Numpad * | Save / unsave |
+| Numpad 1 | Open Share controls |
+| Numpad 3 | Open More controls |
+| Numpad 0 | Hide / show |
+| Numpad decimal | Enter / leave interaction mode |
+| Escape | Leave interaction mode and return focus to War Thunder |
+
+Share and More open Instagram's own controls in interaction mode. Nothing is sent automatically. Hiding pauses and mutes the Reel. Showing restores the configured volume and resumes only if it was playing before hide. While hidden, only the show shortcut remains reserved; the other numpad keys return to the game.
+
+Shortcuts are registered while War Thunder or the overlay is focused. Detection uses the foreground window title; the default match is `War Thunder`. If Windows or another application has reserved a key, Settings reports which shortcut could not be registered. Change shortcuts, opacity, volume, title match, and window position in Settings or the local `config.json` opened from Settings. Keep shortcuts unique. With Num Lock off, some numpad accelerators may behave differently; verify your own keyboard.
+
+## Boundaries and limitations
+
+The app uses a normal signed-in Instagram website. Each shortcut performs one user-requested action. It has no Instagram private API, scraping, preset comments, batch engagement, password collection, telemetry, game-process access, memory reading, injection, driver, or keyboard hook. The only native game check reads the foreground window title to decide when to register shortcuts. Instagram can change its page structure and break action detection or the video crop; the app reports missing controls instead of guessing.
+
+Local tests have verified Electron shortcut registration, signed-in Reel playback, the visible crop, comment-field opening, volume, hide/show, opacity, and Reel navigation. **War Thunder with BattlEye enabled has not yet been tested.** Compatibility in one game session would be evidence, not anti-cheat approval. Test it in borderless mode before relying on it. Confirm that reserved keys do not reach the plane, hidden keys return to the game, both Num Lock states, comments, repeated hide/show, login persistence, and behavior after Instagram page updates. Stop using it if either platform objects or game behavior suggests a conflict.
+
+Before any packaged release or recommendation for in-game use, recheck the current [Gaijin terms](https://legal.gaijin.net/en/termsofservice), [BattlEye FAQ](https://www.battleye.com/support/faq/), and [Instagram terms](https://help.instagram.com/581066165581870). The public source is a work in progress, not a tested game release.
+
+## Project page
+
+The simple static GitHub Pages site is in `docs/`. Preview it locally by opening `docs/index.html`, or serve that folder with any static file server. The page has no build step or external dependencies.
+
+GitHub Pages publishes from the default branch's `/docs` folder. The site has relative asset paths and no build step.

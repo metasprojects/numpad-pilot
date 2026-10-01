@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reel Overlay Settings</title>
+  <style>
+    :root { color-scheme: dark; font: 14px system-ui, sans-serif; background: #101218; color: #f3f4f6; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 26px; }
+    h1 { font-size: 24px; letter-spacing: -.04em; margin: 0 0 5px; }
+    h2 { font-size: 14px; margin: 26px 0 13px; text-transform: uppercase; letter-spacing: .12em; color: #9aa4bb; }
+    p { margin: 0 0 14px; color: #aab1c0; line-height: 1.5; }
+    .card { background: #1a1e28; border: 1px solid #303746; border-radius: 14px; padding: 16px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 12px 0; }
+    label { font-weight: 600; }
+    input[type=range] { width: 220px; accent-color: #80c9ff; }
+    input[type=text] { width: 160px; padding: 8px 10px; border: 1px solid #475063; border-radius: 8px; background: #11141c; color: #f3f4f6; font: 13px ui-monospace, monospace; }
+    input.wide { width: 100%; margin-top: 7px; }
+    .key-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; }
+    .key-grid .row { margin: 4px 0; }
+    .key-grid input { width: 100px; }
+    button { border: 0; border-radius: 9px; padding: 10px 14px; background: #6cbcff; color: #08111c; font-weight: 700; cursor: pointer; }
+    button.secondary { background: #2b3443; color: #e5eaf2; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
+    #message { min-height: 20px; margin-top: 12px; color: #9fe3ba; }
+    #message.error { color: #ffada8; }
+    #status { font-size: 12px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+    small { color: #8993a6; }
+  </style>
+</head>
+<body>
+  <h1>Reel Overlay</h1>
+  <p>Only the Reel shows during play. The window passes mouse input through to War Thunder. Press numpad decimal to move or resize it.</p>
+  <div class="card">
+    <div class="row"><label for="opacity">Opacity</label><input id="opacity" type="range" min="30" max="100" step="1"><output id="opacityValue"></output></div>
+    <div class="row"><label for="volume">Reel volume</label><input id="volume" type="range" min="0" max="100" step="1"><output id="volumeValue"></output></div>
+  </div>
+  <h2>Numpad shortcuts</h2>
+  <div class="card"><div id="keys" class="key-grid"></div><small>Use Electron accelerator names, such as num2 or Control+Alt+R. Each shortcut must be unique.</small></div>
+  <h2>War Thunder detection</h2>
+  <div class="card">
+    <label for="title">Window title contains</label>
+    <input id="title" class="wide" type="text" spellcheck="false">
+  </div>
+  <div class="buttons">
+    <button id="save">Save settings</button>
+    <button id="reload" class="secondary">Reload file</button>
+    <button id="open" class="secondary">Open config file</button>
+  </div>
+  <div id="message" role="status"></div>
+  <h2>Status</h2>
+  <div class="card" id="status"></div>
+  <script src="settings.js"></script>
+</body>
+</html>

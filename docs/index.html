@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Reel Overlay is a small Windows Instagram Reels overlay for War Thunder in borderless mode.">
+  <title>Reel Overlay</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div class="topline"><span>REEL OVERLAY</span><span>WINDOWS · WORK IN PROGRESS</span></div>
+      <h1>Reels while you wait.<br><span>Gone when you fly.</span></h1>
+      <p>A small Instagram Reel window that sits over War Thunder in borderless mode. Scroll, pause, and adjust it with the numpad. Press <kbd>0</kbd> to hide it fast.</p>
+      <a class="button" href="https://github.com/metasprojects/reel-overlay">View on GitHub ↗</a>
+    </header>
+
+    <section aria-labelledby="why-title">
+      <h2 id="why-title">What it does</h2>
+      <ul>
+        <li>Shows only the Reel video during play, with no sidebar or scroll bars.</li>
+        <li>Lets you control Reel volume and window opacity separately.</li>
+        <li>Hides, pauses, and mutes with one key. Showing it restores playback if it was playing.</li>
+        <li>Opens Instagram's own controls when you want to comment or share.</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="keys-title">
+      <h2 id="keys-title">Default keys</h2>
+      <p>You can change these in the app settings.</p>
+      <div class="key-list">
+        <div><kbd>8</kbd> / <kbd>2</kbd><span>Previous / next Reel</span></div>
+        <div><kbd>5</kbd><span>Pause / play</span></div>
+        <div><kbd>4</kbd> / <kbd>6</kbd><span>Volume down / up</span></div>
+        <div><kbd>7</kbd> / <kbd>9</kbd><span>Opacity down / up</span></div>
+        <div><kbd>+</kbd> / <kbd>-</kbd><span>Like / unlike</span></div>
+        <div><kbd>/</kbd><span>Comment</span></div>
+        <div><kbd>*</kbd><span>Save / unsave</span></div>
+        <div><kbd>1</kbd> / <kbd>3</kbd><span>Share / More</span></div>
+        <div><kbd>0</kbd><span>Hide / show</span></div>
+        <div><kbd>.</kbd> / <kbd>Esc</kbd><span>Interact / return to game</span></div>
+      </div>
+      <p class="small">All number keys above are on the numpad. Comments are typed and submitted by you.</p>
+    </section>
+
+    <section id="setup" aria-labelledby="setup-title">
+      <h2 id="setup-title">Run it locally</h2>
+      <ol>
+        <li>Install Node.js on Windows.</li>
+        <li>Get the code from <a href="https://github.com/metasprojects/reel-overlay">GitHub</a>, then open a terminal in its folder.</li>
+        <li>Run <code>npm install</code>, then <code>npm start</code>.</li>
+        <li>Sign in through Instagram's page in the app. Set War Thunder to borderless windowed.</li>
+      </ol>
+    </section>
+
+    <section class="status" aria-labelledby="status-title">
+      <h2 id="status-title">Current status</h2>
+      <p>The source is public as a work in progress. The app works in local Windows tests, but it has <strong>not yet been tested in War Thunder with BattlEye enabled</strong>. This project is unaffiliated with Gaijin, BattlEye, Meta, and Instagram.</p>
+    </section>
+
+    <footer>Made for fun. Work in progress.</footer>
+  </main>
+</body>
+</html>

@@ -1,0 +1,29 @@
+:root { color-scheme: dark; font-family: Arial, Helvetica, sans-serif; background: #101316; color: #ebeff0; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; }
+main { width: min(760px, calc(100% - 36px)); margin: auto; }
+header { padding: 34px 0 58px; border-bottom: 1px solid #343b40; }
+.topline { display: flex; justify-content: space-between; gap: 20px; color: #f28b66; font-size: 11px; font-weight: 800; letter-spacing: .11em; }
+.topline span:last-child { color: #929da3; text-align: right; }
+h1 { margin: 85px 0 22px; font-size: clamp(42px, 8vw, 74px); line-height: 1.03; letter-spacing: -.055em; }
+h1 span { color: #f28b66; }
+header p { max-width: 560px; color: #b8c2c6; font-size: 18px; line-height: 1.55; }
+.button { display: inline-block; margin-top: 16px; padding: 12px 17px; background: #f28b66; color: #11161a; font-size: 13px; font-weight: 800; text-decoration: none; border-radius: 5px; }
+.button:hover { background: #ffa382; }
+a:not(.button) { color: #f28b66; }
+section { padding: 34px 0 40px; border-bottom: 1px solid #343b40; }
+h2 { margin: 0 0 16px; font-size: 25px; letter-spacing: -.03em; }
+p, li { color: #b8c2c6; line-height: 1.65; }
+ul, ol { padding-left: 22px; }
+li { padding: 3px 0; }
+.key-list { border-top: 1px solid #343b40; }
+.key-list div { display: flex; align-items: center; gap: 6px; padding: 11px 2px; border-bottom: 1px solid #343b40; }
+.key-list span { flex: 0 0 calc(100% - 150px); margin-left: auto; color: #d5dddf; }
+kbd, code { display: inline-block; padding: 3px 7px; border: 1px solid #455058; border-radius: 4px; background: #1c2429; color: #f2f5f4; font-family: Consolas, monospace; font-size: .9em; }
+.small { margin-bottom: 0; font-size: 13px; }
+.status { border: 0; }
+.status strong { color: #f0b59f; }
+footer { padding: 25px 0 50px; color: #8e999f; font-size: 12px; }
+@media (max-width: 520px) { h1 { margin-top: 65px; } .topline { font-size: 9px; } .key-list div { font-size: 14px; } .key-list span { flex-basis: calc(100% - 110px); } header p { font-size: 16px; } }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }

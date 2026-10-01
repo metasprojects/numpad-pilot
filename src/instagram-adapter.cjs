@@ -1,0 +1,174 @@
+function bootstrap() {
+  if (window.__reelOverlay) return;
+
+  let desiredVolume = 0.5;
+  let interaction = false;
+  const style = document.createElement('style');
+  style.id = 'reel-overlay-style';
+  style.textContent = `
+    * { scrollbar-width: none !important; }
+    *::-webkit-scrollbar { display: none !important; width: 0 !important; }
+    html, body { background: #0b0d12 !important; }
+    #reel-overlay-grip { position: fixed; z-index: 2147483647; top: 4px; right: 6px;
+      padding: 5px 10px; border-radius: 7px; color: white; background: #111c;
+      font: 600 11px system-ui; letter-spacing: .04em; -webkit-app-region: drag;
+      user-select: none; display: none; }
+  `;
+  document.head.appendChild(style);
+  const grip = document.createElement('div');
+  grip.id = 'reel-overlay-grip';
+  grip.textContent = 'DRAG  ·  ESC TO FLY';
+  document.body.appendChild(grip);
+
+  function visibleArea(element) {
+    const rect = element.getBoundingClientRect();
+    const width = Math.max(0, Math.min(innerWidth, rect.right) - Math.max(0, rect.left));
+    const height = Math.max(0, Math.min(innerHeight, rect.bottom) - Math.max(0, rect.top));
+    return width * height;
+  }
+
+  function activeVideo() {
+    return [...document.querySelectorAll('video')]
+      .filter(video => visibleArea(video) > 1000)
+      .sort((a, b) => visibleArea(b) - visibleArea(a))[0] || null;
+  }
+
+  function reelRoot(video) {
+    for (let node = video; node && node !== document.body; node = node.parentElement) {
+      if (node.querySelector('svg[aria-label="Like"],svg[aria-label="Unlike"]') &&
+          node.querySelector('svg[aria-label="Comment"]')) return node;
+    }
+    return null;
+  }
+
+  function videoRect(video) {
+    if (!video) return null;
+    const rect = video.getBoundingClientRect();
+    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+      viewportWidth: innerWidth, viewportHeight: innerHeight };
+  }
+
+  function buttonFor(root, labels) {
+    for (const label of labels) {
+      const svg = root?.querySelector(`svg[aria-label="${label}"]`);
+      const button = svg?.closest('[role="button"],button');
+      if (button) return button;
+    }
+    return null;
+  }
+
+  function hideMobileBar() {
+    const svg = document.querySelector('svg[aria-label="New post"]');
+    for (let node = svg; node && node !== document.body; node = node.parentElement) {
+      const rect = node.getBoundingClientRect();
+      if (rect.width > innerWidth * 0.9 && rect.height >= 40 && rect.height <= 85) {
+        node.style.display = 'none';
+        break;
+      }
+    }
+    const messages = document.querySelector('svg[aria-label="Messages"]')?.closest('[role="button"]');
+    if (messages) messages.style.display = 'none';
+    grip.style.display = interaction ? 'block' : 'none';
+  }
+
+  function setVolume(value) {
+    desiredVolume = Math.max(0, Math.min(1, value));
+    const video = activeVideo();
+    if (video) {
+      video.volume = desiredVolume;
+      video.muted = desiredVolume === 0;
+    }
+    return { ok: !!video, volume: desiredVolume };
+  }
+
+  async function action(name, value) {
+    hideMobileBar();
+    const video = activeVideo();
+    if (name === 'status') return { ok: !!video, paused: video?.paused ?? true, playingCount: [...document.querySelectorAll('video')].filter(v => !v.paused).length, volume: desiredVolume, rect: videoRect(video), url: location.href };
+    if (name === 'interact') { interaction = !!value; hideMobileBar(); return { ok: true }; }
+    if (name === 'volumePreset') { desiredVolume = Math.max(0, Math.min(1, value)); if (video) video.volume = desiredVolume; return { ok: !!video, volume: desiredVolume }; }
+    if (name === 'volume') return setVolume(value);
+    if (name === 'hide') {
+      const wasPlaying = !!video && !video.paused;
+      for (const v of document.querySelectorAll('video')) v.pause();
+      return { ok: true, wasPlaying };
+    }
+    if (!video) return { ok: false, error: 'No visible Reel is ready.' };
+    if (name === 'show') {
+      setVolume(value.volume);
+      if (value.resume) await video.play().catch(() => {});
+      return { ok: true, paused: video.paused };
+    }
+    if (name === 'playPause') {
+      if (video.paused) {
+        setVolume(desiredVolume);
+        await video.play().catch(() => {});
+      } else video.pause();
+      return { ok: true, paused: video.paused };
+    }
+    const root = reelRoot(video);
+    if (name === 'controls') return { ok: !!root, controls: Object.fromEntries(
+      ['Like', 'Unlike', 'Comment', 'Share', 'Save', 'Remove', 'Unsave', 'More']
+        .map(label => [label, !!buttonFor(root, [label])])) };
+    if (name === 'like' || name === 'unlike') {
+      const wanted = name === 'like' ? 'Like' : 'Unlike';
+      const button = buttonFor(root, [wanted]);
+      if (button) button.click();
+      else if (!buttonFor(root, [name === 'like' ? 'Unlike' : 'Like']))
+        return { ok: false, error: 'Instagram’s Like control was not found.' };
+      return { ok: true, changed: !!button };
+    }
+    if (name === 'save' || name === 'share' || name === 'more') {
+      const labels = name === 'save' ? ['Save', 'Remove', 'Unsave'] : name === 'share' ? ['Share'] : ['More'];
+      const button = buttonFor(root, labels);
+      if (!button) return { ok: false, error: `Instagram’s ${name} control was not found.` };
+      button.click();
+      return { ok: true };
+    }
+    if (name === 'comment') {
+      const button = buttonFor(root, ['Comment']);
+      if (!button) return { ok: false, error: 'Instagram’s Comment control was not found.' };
+      const wasPlaying = !video.paused;
+      video.pause();
+      button.click();
+      await new Promise(resolve => setTimeout(resolve, 900));
+      const field = [...document.querySelectorAll('input,textarea,[contenteditable="true"]')]
+        .find(element => /add a comment/i.test(element.getAttribute('placeholder') || element.getAttribute('aria-label') || ''));
+      field?.focus();
+      return { ok: true, wasPlaying, fieldReady: !!field };
+    }
+    return { ok: false, error: 'Unknown action.' };
+  }
+
+  let lastVideo = null;
+  setInterval(() => {
+    hideMobileBar();
+    const video = activeVideo();
+    if (video && video !== lastVideo) {
+      lastVideo = video;
+      video.volume = desiredVolume;
+      // A new Reel may begin muted by Instagram. Leave that state until a user key action.
+    }
+  }, 800);
+  hideMobileBar();
+  window.__reelOverlay = { action };
+}
+
+const bootstrapSource = `(${bootstrap.toString()})()`;
+
+function isInstagram(webContents) {
+  try { return new URL(webContents.getURL()).hostname === 'www.instagram.com'; }
+  catch { return false; }
+}
+
+async function invoke(webContents, name, value = null) {
+  if (!isInstagram(webContents)) return { ok: false, error: 'Open Instagram Reels first.' };
+  try {
+    await webContents.executeJavaScript(bootstrapSource, true);
+    return await webContents.executeJavaScript(`window.__reelOverlay.action(${JSON.stringify(name)}, ${JSON.stringify(value)})`, true);
+  } catch (error) {
+    return { ok: false, error: `Instagram page action failed: ${error.message}` };
+  }
+}
+
+module.exports = { invoke, isInstagram, bootstrapSource };

@@ -1,0 +1,22 @@
+{
+  "name": "reel-overlay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Windows Reels overlay for borderless War Thunder",
+  "license": "MIT",
+  "main": "src/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "smoke": "electron . --smoke",
+    "instagram-check": "electron . --instagram-check",
+    "integration-check": "electron . --integration-check",
+    "action-check": "electron . --action-check",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "electron": "44.5.1"
+  },
+  "dependencies": {
+    "koffi": "^3.3.2"
+  }
+}
