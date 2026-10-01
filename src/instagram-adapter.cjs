@@ -24,6 +24,25 @@ function bootstrap() {
     #numpad-pilot-move-hint { padding: 6px 9px; font: 700 10px system-ui; letter-spacing: .03em; }
     #numpad-pilot-feedback { padding: 6px 10px; font: 700 11px system-ui; }
     #numpad-pilot-feedback.visible { display: block; animation: np-feedback 1150ms ease-out forwards; }
+    [data-numpad-panel="comment"] {
+      background: #171c25 !important; border: 1px solid #ffffff30 !important;
+      border-radius: 22px !important; box-shadow: 0 18px 48px #0009 !important;
+      overflow: hidden !important;
+    }
+    [data-numpad-panel="comment"] input[placeholder*="comment"],
+    [data-numpad-panel="send"] input[placeholder="Search"] {
+      caret-color: #f4b64d !important; color: #fff !important;
+    }
+    [data-numpad-panel="comment-composer"] {
+      background: #252c38 !important; border: 1px solid #ffffff24 !important;
+      border-radius: 16px !important; box-shadow: inset 0 1px #ffffff0a !important;
+    }
+    [data-numpad-panel="send"] {
+      background: #151a22 !important; color: #fff !important;
+    }
+    [data-numpad-panel="send"] input[placeholder="Search"] {
+      background: #29313d !important; border-radius: 14px !important;
+    }
     @keyframes np-feedback {
       0% { opacity: 0; transform: translate(-100%, -6px) scale(.92); }
       18% { opacity: 1; transform: translate(-100%, 0) scale(1.04); }
@@ -136,12 +155,39 @@ function bootstrap() {
     return { ok: !!video, volume: desiredVolume };
   }
 
+  function themePanel(kind) {
+    const selector = kind === 'comment' ? 'input[placeholder*="comment"]' : 'input[placeholder="Search"]';
+    const field = [...document.querySelectorAll(selector)].find(element => visibleArea(element) > 0);
+    const dialog = field?.closest('[role="dialog"]');
+    if (!field || !dialog) return false;
+    if (kind === 'comment') {
+      const panel = [...(function* () { for (let node = field.parentElement; node && node !== dialog; node = node.parentElement) yield node; })()]
+        .find(node => { const r = node.getBoundingClientRect(); return r.width > 300 && r.height > 300; });
+      const composer = field.parentElement?.parentElement?.parentElement;
+      if (panel) panel.dataset.numpadPanel = 'comment';
+      if (composer) composer.dataset.numpadPanel = 'comment-composer';
+    } else {
+      const sheet = [...(function* () { for (let node = field.parentElement; node && node !== dialog; node = node.parentElement) yield node; })()]
+        .find(node => { const r = node.getBoundingClientRect(); return r.width > 400 && r.height > 500; });
+      if (sheet) sheet.dataset.numpadPanel = 'send';
+    }
+    return true;
+  }
+
   async function action(name, value) {
     hideMobileBar();
     const video = activeVideo();
     if (name === 'status') return { ok: !!video, paused: video?.paused ?? true, playingCount: [...document.querySelectorAll('video')].filter(v => !v.paused).length, volume: desiredVolume, rect: videoRect(video), url: location.href };
     if (name === 'moveMode') { moving = !!value; positionDecorations(); return { ok: true, moving }; }
     if (name === 'feedback') return showFeedback(value);
+    if (name === 'dismissDialog') {
+      const dialog = [...document.querySelectorAll('[role="dialog"]')].at(-1);
+      if (!dialog) return { ok: true, dismissed: false };
+      const closeIcon = dialog.querySelector('svg[aria-label="Close"]');
+      const close = closeIcon?.closest('button,[role="button"]') || closeIcon?.parentElement;
+      close?.click();
+      return { ok: true, dismissed: !!close };
+    }
     if (name === 'interact') {
       interaction = !!(typeof value === 'object' ? value?.active : value);
       const purpose = typeof value === 'object' && ['CONTROLS', 'COMMENT', 'SEND', 'MORE'].includes(value?.purpose) ? value.purpose : 'CONTROLS';
@@ -185,6 +231,7 @@ function bootstrap() {
       const button = buttonFor(root, labels);
       if (!button) return { ok: false, error: `Instagram’s ${name} control was not found.` };
       button.click();
+      if (name === 'share') for (const delay of [350, 700, 1100]) setTimeout(() => themePanel('send'), delay);
       return { ok: true };
     }
     if (name === 'comment') {
@@ -201,7 +248,11 @@ function bootstrap() {
           return rect.width > 30 && rect.height > 10 && /comment/i.test(label);
         });
       field?.focus();
-      return { ok: true, wasPlaying, fieldReady: !!field };
+      themePanel('comment');
+      const fieldRect = field?.getBoundingClientRect();
+      const rowRect = field?.parentElement?.parentElement?.parentElement?.parentElement?.getBoundingClientRect();
+      return { ok: true, wasPlaying, fieldReady: !!field,
+        fieldBottom: fieldRect?.bottom || 0, rowBottom: rowRect?.bottom || fieldRect?.bottom || 0 };
     }
     return { ok: false, error: 'Unknown action.' };
   }

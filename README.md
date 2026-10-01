@@ -15,7 +15,7 @@ npm ci
 npm run dist:win
 ```
 
-Then open `dist\Numpad Pilot Setup 0.1.2.exe`. To run the source directly, use `npm start` after `npm ci`.
+Then open `dist\Numpad Pilot Setup 0.1.3.exe`. To run the source directly, use `npm start` after `npm ci`.
 
 ## First use
 
@@ -41,9 +41,9 @@ Exclusive fullscreen may cover ordinary desktop windows. The overlay starts near
 | Numpad decimal | Enter / leave move mode without leaving the game |
 | Escape | Close the Comment / Send view and return focus to War Thunder |
 
-Comment opens and focuses Instagram's comment field. Send / Share and More expand the view before opening Instagram's controls so their menus remain usable. A short, translucent cue confirms that each view opened. You type comments, choose recipients, and submit in Instagram; nothing is sent automatically. Press Escape to return to the game. Hiding pauses and mutes the Reel. Showing restores the configured volume and resumes only if it was playing before hide. While hidden, only the show shortcut remains reserved; the other numpad keys return to the game.
+Comment opens a restyled Instagram comment panel inside the compact Reel window without changing the Reel's scale. Send / Share opens a restyled recipient panel in a temporary, wider window at the same scale. More still opens the full Instagram view. You type comments, choose recipients, and submit in Instagram; nothing is sent automatically. Press Escape to close a panel and return to the game. Hiding pauses and mutes the Reel. Showing restores the configured volume and resumes only if it was playing before hide. While hidden, only the show shortcut remains reserved; the other numpad keys return to the game.
 
-Like, Unlike, Comment, and Send show a small brief cue inside the Reel window. It does not take focus or mouse input from the game.
+Like, Unlike, and Comment show a small brief cue inside the Reel window. The cue does not take focus or mouse input from the game.
 
 Shortcuts are registered while War Thunder or the overlay is focused. Detection uses the foreground window title; the default match is `War Thunder`. If Windows or another application has reserved a key, Settings reports which shortcut could not be registered. Change shortcuts, opacity, volume, title match, and window position in Settings or the local `config.json` opened from Settings. Keep shortcuts unique. With Num Lock off, some numpad accelerators may behave differently; verify your own keyboard.
 

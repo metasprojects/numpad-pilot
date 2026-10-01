@@ -73,7 +73,7 @@ function layoutCrop() {
   setTimeout(() => { changingLayout = false; }, 100);
 }
 async function refreshCrop() {
-  if (mode !== 'play' || hidden || !isInstagram(reelView.webContents)) return;
+  if (!reelView || mode !== 'play' || hidden || !isInstagram(reelView.webContents)) return;
   const result = await pageAction('status');
   if (!result.ok || !result.rect || result.rect.width < 150 || result.rect.height < 200) return;
   const next = result.rect;
@@ -89,8 +89,8 @@ function isGameForeground(info) {
 function desiredBindings() {
   if (settingsWindow?.isFocused()) return [];
   if (!(gameActive || overlay?.isFocused())) return [];
-  if (hidden || mode === 'commenting') return [['toggle', config.keys.toggle]];
-  if (mode === 'interactive') return [['toggle', config.keys.toggle], ['interact', config.keys.interact]];
+  if (hidden) return [['toggle', config.keys.toggle]];
+  if (mode === 'commenting' || mode === 'sending' || mode === 'interactive') return [['toggle', config.keys.toggle], ['interact', config.keys.interact]];
   if (mode === 'moving') return [
     ['toggle', config.keys.toggle], ['interact', config.keys.interact],
     ['moveUp', config.keys.previous], ['moveDown', config.keys.next],
@@ -200,9 +200,65 @@ async function enterInteraction(comment = false, purpose = 'CONTROLS') {
   refreshHotkeys(true);
   return result;
 }
+async function enterCompactComment() {
+  if (hidden) await showOverlay();
+  if (mode !== 'play') await leaveInteraction();
+  const info = foregroundInfo();
+  if (isGameForeground(info)) lastGameHwnd = info.hwnd;
+  playBounds = overlay.getBounds(); interactionBounds = playBounds;
+  mode = 'commenting';
+  const result = await pageAction('comment');
+  if (!result.ok || !result.fieldReady || !reelRect) {
+    mode = 'play'; playBounds = null; interactionBounds = null;
+    notifyStatus('Instagram comment field unavailable; open Instagram view from the tray');
+    refreshHotkeys(true); return result;
+  }
+  resumeAfterComment = !!result.wasPlaying;
+  const scale = reelView.webContents.getZoomFactor();
+  const neededHeight = Math.ceil((Math.max(result.rowBottom, result.fieldBottom) - reelRect.y) * scale + 10);
+  const area = screen.getPrimaryDisplay().workArea;
+  const height = Math.min(Math.max(overlay.getBounds().height, neededHeight), area.height - 16);
+  const bounds = overlay.getBounds();
+  changingLayout = true;
+  overlay.setBounds({ ...bounds, y: Math.min(bounds.y, area.y + area.height - height), height });
+  interactionBounds = overlay.getBounds();
+  setTimeout(() => { changingLayout = false; }, 100);
+  overlay.setIgnoreMouseEvents(false); overlay.show(); overlay.focus();
+  await pageAction('feedback', { kind: 'comment', changed: true });
+  notifyStatus('Type and post in the Reel panel; Escape returns to the game');
+  refreshHotkeys(true);
+  return result;
+}
+async function enterCompactSend() {
+  if (hidden) await showOverlay();
+  if (mode !== 'play') await leaveInteraction();
+  const info = foregroundInfo();
+  if (isGameForeground(info)) lastGameHwnd = info.hwnd;
+  const result = await pageAction('share');
+  if (!result.ok) return result;
+  playBounds = overlay.getBounds(); interactionBounds = playBounds;
+  mode = 'sending';
+  const scale = reelView.webContents.getZoomFactor();
+  const area = screen.getPrimaryDisplay().workArea;
+  const width = Math.min(Math.ceil((reelRect?.viewportWidth || 480) * scale), area.width - 16);
+  const height = Math.min(Math.ceil((reelRect?.viewportHeight || 640) * scale), area.height - 16);
+  const bounds = overlay.getBounds();
+  changingLayout = true;
+  overlay.setBounds({ x: Math.min(bounds.x, area.x + area.width - width),
+    y: Math.min(bounds.y, area.y + area.height - height), width, height });
+  interactionBounds = overlay.getBounds();
+  reelView.setBounds({ x: 0, y: 0, width, height });
+  setTimeout(() => { changingLayout = false; }, 100);
+  overlay.setIgnoreMouseEvents(false); overlay.show(); overlay.focus();
+  notifyStatus('Choose a recipient and send in Instagram; Escape returns to the game');
+  refreshHotkeys(true);
+  return result;
+}
 async function leaveInteraction() {
   if (mode === 'play' || mode === 'moving') return;
-  const wasCommenting = mode === 'commenting'; mode = 'play';
+  const wasCommenting = mode === 'commenting';
+  const wasSending = mode === 'sending'; mode = 'play';
+  if (wasCommenting || wasSending) await pageAction('dismissDialog');
   await pageAction('interact', false);
   if (playBounds) {
     const moved = overlay.getBounds();
@@ -226,14 +282,13 @@ async function perform(action) {
   if (hidden) return;
   if (action === 'interact') return mode === 'play' ? enterMoveMode() : mode === 'moving' ? leaveMoveMode() : leaveInteraction();
   if (action.startsWith('move')) return moveReel(action);
-  if (action === 'comment') return enterInteraction(true);
-  if (action === 'share' || action === 'more') {
-    await enterInteraction(false, action === 'share' ? 'SEND' : 'MORE');
+  if (action === 'comment') return enterCompactComment();
+  if (action === 'share') return enterCompactSend();
+  if (action === 'more') {
+    await enterInteraction(false, 'MORE');
     const result = await pageAction(action);
     if (result.ok) {
-      if (action === 'share') await pageAction('feedback', { kind: 'share', changed: true });
-      notifyStatus(action === 'share' ? 'Choose and send in Instagram; Escape returns to the game' :
-        'More options open; Escape returns to the game');
+      notifyStatus('More options open; Escape returns to the game');
     }
     return;
   }
@@ -276,9 +331,9 @@ function updateTray() {
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: hidden ? 'Show Reel' : 'Hide Reel', click: () => perform('toggle') },
     { label: mode === 'play' ? 'Move Reel' : mode === 'moving' ? 'Finish moving' : 'Return to game', click: () => perform('interact') },
-    { label: mode === 'interactive' || mode === 'commenting' ? 'Close Instagram view' : 'Open Instagram view', click: async () => {
+    { label: mode === 'interactive' || mode === 'commenting' || mode === 'sending' ? 'Close Instagram view' : 'Open Instagram view', click: async () => {
       if (mode === 'moving') await leaveMoveMode();
-      if (mode === 'interactive' || mode === 'commenting') await leaveInteraction();
+      if (mode === 'interactive' || mode === 'commenting' || mode === 'sending') await leaveInteraction();
       else await enterInteraction();
     } },
     { label: 'Settings', click: showSettings }, { type: 'separator' },
@@ -400,8 +455,11 @@ async function runIntegrationCheck() {
   const feedbackInReel = feedback.ok && feedback.inWindow && feedbackRect.x >= reelStatus.rect.x &&
     feedbackRect.right <= reelStatus.rect.x + reelStatus.rect.width && feedbackRect.y >= reelStatus.rect.y &&
     feedbackRect.bottom <= reelStatus.rect.y + reelStatus.rect.height;
-  const comment = await enterInteraction(true);
+  const comment = await enterCompactComment();
   const commentView = overlay.getBounds();
+  const compactComment = commentView.width === originalPlayBounds.width &&
+    commentView.height >= originalPlayBounds.height &&
+    reelView.webContents.getZoomFactor() === crop.zoom;
   await leaveInteraction();
   const commentRestored = overlay.getBounds().x === originalPlayBounds.x && overlay.getBounds().y === originalPlayBounds.y;
   const volume = await pageAction('volume', 0.4);
@@ -423,25 +481,36 @@ async function runIntegrationCheck() {
   overlay.setOpacity(config.opacity);
   const passed = !!(crop.rect && initial.ok && controls.ok &&
     ['Like', 'Comment', 'Share', 'Save', 'More'].every(name => controls.controls[name]) &&
-    comment.ok && comment.fieldReady && commentRestored && movePassed && feedbackInReel && volume.ok && volumeStepPassed && !hiddenState.visible && hiddenState.muted && show.ok && opacity === 0.65);
-  console.log(JSON.stringify({ passed, crop, initial, controls, moveMode, movePassed, movedBounds, feedbackInReel, feedbackRect, comment, commentView, commentRestored, volume, volumeStepPassed, hiddenState, show, opacity, navigationChanged: beforeUrl !== afterUrl }));
+    comment.ok && comment.fieldReady && compactComment && commentRestored && movePassed && feedbackInReel && volume.ok && volumeStepPassed && !hiddenState.visible && hiddenState.muted && show.ok && opacity === 0.65);
+  console.log(JSON.stringify({ passed, crop, initial, controls, moveMode, movePassed, movedBounds, feedbackInReel, feedbackRect, comment, commentView, compactComment, commentRestored, volume, volumeStepPassed, hiddenState, show, opacity, navigationChanged: beforeUrl !== afterUrl }));
   if (passed) app.quit(); else app.exit(1);
 }
 async function runActionCheck() {
   overlay.showInactive();
   await new Promise(resolve => setTimeout(resolve, 3000));
-  await perform('share');
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const share = { mode, bounds: overlay.getBounds() };
+  await refreshCrop();
+  const baseline = { bounds: overlay.getBounds(), view: reelView.getBounds(), zoom: reelView.webContents.getZoomFactor(), dialogs: await reelView.webContents.executeJavaScript('document.querySelectorAll("[role=dialog]").length', true) };
+  const comment = await enterCompactComment();
+  const commentThemed = await reelView.webContents.executeJavaScript('!!document.querySelector("[data-numpad-panel=comment]") && getComputedStyle(document.querySelector("[data-numpad-panel=comment]")).borderTopLeftRadius === "22px"', true);
+  const commentView = { bounds: overlay.getBounds(), view: reelView.getBounds(), zoom: reelView.webContents.getZoomFactor() };
+  await leaveInteraction();
+  const restored = { bounds: overlay.getBounds(), view: reelView.getBounds(), zoom: reelView.webContents.getZoomFactor() };
+  const share = await enterCompactSend();
+  await new Promise(resolve => setTimeout(resolve, 1200));
+  const sendView = { mode, bounds: overlay.getBounds(), zoom: reelView.webContents.getZoomFactor() };
   const shareOpen = await reelView.webContents.executeJavaScript('document.querySelectorAll("[role=dialog]").length > 0', true);
-  reelView.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
-  reelView.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
-  await new Promise(resolve => setTimeout(resolve, 400));
-  await perform('more');
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const more = { mode, bounds: overlay.getBounds() };
-  const moreOpen = await reelView.webContents.executeJavaScript('document.querySelectorAll("[role=dialog],[role=menu]").length > 0', true);
-  console.log(JSON.stringify({ share, shareOpen, more, moreOpen }));
+  const sendThemed = await reelView.webContents.executeJavaScript('!!document.querySelector("[data-numpad-panel=send]") && getComputedStyle(document.querySelector("[data-numpad-panel=send]")).backgroundColor === "rgb(21, 26, 34)"', true);
+  await leaveInteraction();
+  await new Promise(resolve => setTimeout(resolve, 450));
+  const dialogClosed = await reelView.webContents.executeJavaScript('document.querySelectorAll("[role=dialog]").length === 0', true);
+  const final = { bounds: overlay.getBounds(), view: reelView.getBounds(), zoom: reelView.webContents.getZoomFactor() };
+  const passed = comment.ok && comment.fieldReady && commentView.bounds.width === baseline.bounds.width &&
+    commentView.bounds.height >= baseline.bounds.height && commentView.zoom === baseline.zoom &&
+    restored.bounds.width === baseline.bounds.width && share.ok && shareOpen && commentThemed && sendThemed &&
+    sendView.zoom === baseline.zoom && sendView.bounds.width > baseline.bounds.width &&
+    final.bounds.width === baseline.bounds.width && dialogClosed;
+  console.log(JSON.stringify({ passed, baseline, comment, commentThemed, commentView, restored, share, sendView, sendThemed, shareOpen, dialogClosed, final }));
+  if (!passed) return app.exit(1);
   app.quit();
 }
 app.on('second-instance', () => { if (hidden) showOverlay(); else showSettings(); });
