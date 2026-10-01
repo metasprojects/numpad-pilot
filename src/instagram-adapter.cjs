@@ -4,19 +4,19 @@ function bootstrap() {
   let desiredVolume = 0.5;
   let interaction = false;
   const style = document.createElement('style');
-  style.id = 'reel-overlay-style';
+  style.id = 'numpad-pilot-style';
   style.textContent = `
     * { scrollbar-width: none !important; }
     *::-webkit-scrollbar { display: none !important; width: 0 !important; }
     html, body { background: #0b0d12 !important; }
-    #reel-overlay-grip { position: fixed; z-index: 2147483647; top: 4px; right: 6px;
+    #numpad-pilot-grip { position: fixed; z-index: 2147483647; top: 4px; right: 6px;
       padding: 5px 10px; border-radius: 7px; color: white; background: #111c;
       font: 600 11px system-ui; letter-spacing: .04em; -webkit-app-region: drag;
       user-select: none; display: none; }
   `;
   document.head.appendChild(style);
   const grip = document.createElement('div');
-  grip.id = 'reel-overlay-grip';
+  grip.id = 'numpad-pilot-grip';
   grip.textContent = 'DRAG  ·  ESC TO FLY';
   document.body.appendChild(grip);
 

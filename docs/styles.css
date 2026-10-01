@@ -4,9 +4,10 @@ html { scroll-behavior: smooth; }
 body { margin: 0; }
 main { width: min(760px, calc(100% - 36px)); margin: auto; }
 header { padding: 34px 0 58px; border-bottom: 1px solid #343b40; }
+.logo { display: block; width: min(360px, 100%); height: auto; margin-top: 38px; padding: 11px; border-radius: 8px; background: #f5f2ec; }
 .topline { display: flex; justify-content: space-between; gap: 20px; color: #f28b66; font-size: 11px; font-weight: 800; letter-spacing: .11em; }
 .topline span:last-child { color: #929da3; text-align: right; }
-h1 { margin: 85px 0 22px; font-size: clamp(42px, 8vw, 74px); line-height: 1.03; letter-spacing: -.055em; }
+h1 { margin: 55px 0 22px; font-size: clamp(42px, 8vw, 74px); line-height: 1.03; letter-spacing: -.055em; }
 h1 span { color: #f28b66; }
 header p { max-width: 560px; color: #b8c2c6; font-size: 18px; line-height: 1.55; }
 .button { display: inline-block; margin-top: 16px; padding: 12px 17px; background: #f28b66; color: #11161a; font-size: 13px; font-weight: 800; text-decoration: none; border-radius: 5px; }

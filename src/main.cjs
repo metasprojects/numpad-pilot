@@ -9,6 +9,15 @@ app.enableSandbox();
 if (process.platform !== 'win32') app.whenReady().then(() => { console.error('Windows only.'); app.quit(); });
 if (!app.requestSingleInstanceLock()) app.quit();
 
+// Keep the existing Instagram session and settings when upgrading from the old app name.
+const profile = path.join(app.getPath('appData'), 'numpad-pilot');
+const legacyProfile = path.join(app.getPath('appData'), 'reel-overlay');
+if (!fs.existsSync(profile) && fs.existsSync(legacyProfile)) {
+  try { fs.cpSync(legacyProfile, profile, { recursive: true }); }
+  catch (error) { console.error(`Could not migrate the existing profile: ${error.message}`); app.setPath('userData', legacyProfile); }
+}
+if (fs.existsSync(profile)) app.setPath('userData', profile);
+
 const smoke = process.argv.includes('--smoke');
 const instagramCheck = process.argv.includes('--instagram-check');
 const integrationCheck = process.argv.includes('--integration-check');
@@ -27,8 +36,8 @@ function status() {
 function notifyStatus(message, warn = false) {
   lastAction = message;
   settingsWindow?.webContents.send('status', status());
-  if (warn && Notification.isSupported()) new Notification({ title: 'Reel Overlay', body: message }).show();
-  tray?.setToolTip(`Reel Overlay — ${message}`);
+  if (warn && Notification.isSupported()) new Notification({ title: 'Numpad Pilot', body: message }).show();
+  tray?.setToolTip(`Numpad Pilot — ${message}`);
   updateTray();
 }
 function defaultBounds() {
@@ -207,7 +216,7 @@ async function perform(action) {
 }
 function showSettings() {
   if (settingsWindow && !settingsWindow.isDestroyed()) { settingsWindow.show(); settingsWindow.focus(); return; }
-  settingsWindow = new BrowserWindow({ width: 520, height: 700, minWidth: 440, minHeight: 580, title: 'Reel Overlay Settings', backgroundColor: '#101218',
+  settingsWindow = new BrowserWindow({ width: 520, height: 700, minWidth: 440, minHeight: 580, title: 'Numpad Pilot Settings', backgroundColor: '#101218',
     webPreferences: { preload: path.join(__dirname, 'settings-preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true } });
   settingsWindow.setMenu(null); settingsWindow.loadFile(path.join(__dirname, 'settings.html'));
   settingsWindow.on('focus', () => refreshHotkeys(true));
@@ -224,9 +233,9 @@ function updateTray() {
 }
 async function createTray() {
   let icon;
-  try { icon = await app.getFileIcon(process.execPath, { size: 'small' }); }
+  try { icon = nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'icon.png')); if (icon.isEmpty()) throw new Error('Icon missing.'); }
   catch { icon = nativeImage.createEmpty(); }
-  tray = new Tray(icon); tray.setToolTip('Reel Overlay');
+  tray = new Tray(icon); tray.setToolTip('Numpad Pilot');
   tray.on('double-click', () => hidden ? showOverlay() : showSettings()); updateTray();
 }
 function createOverlay() {

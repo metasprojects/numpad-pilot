@@ -1,5 +1,6 @@
 {
-  "name": "reel-overlay",
+  "name": "numpad-pilot",
+  "productName": "Numpad Pilot",
   "version": "0.1.0",
   "private": true,
   "description": "Windows Reels overlay for borderless War Thunder",

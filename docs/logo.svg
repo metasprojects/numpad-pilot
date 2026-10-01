@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 250" role="img" aria-labelledby="title">
+  <title id="title">Numpad Pilot</title>
+  <g fill="#191919">
+    <rect x="8" y="8" width="63" height="63" rx="12"/><rect x="81" y="8" width="63" height="63" rx="12"/><rect x="154" y="8" width="63" height="63" rx="12"/>
+    <rect x="8" y="81" width="63" height="63" rx="12"/><rect x="81" y="81" width="63" height="63" rx="12"/><rect x="154" y="81" width="63" height="63" rx="12"/>
+  </g>
+  <rect x="8" y="154" width="209" height="63" rx="12" fill="#eca728"/>
+  <path d="M96 168v36l32-18z" fill="white"/>
+  <text x="250" y="115" font-family="Arial,Helvetica,sans-serif" font-size="88" font-weight="900" letter-spacing="-5" fill="#191919">NUMPAD</text>
+  <text x="250" y="215" font-family="Arial,Helvetica,sans-serif" font-size="88" font-weight="900" letter-spacing="-5" fill="#eca728">PILOT</text>
+</svg>
