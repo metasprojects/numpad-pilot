@@ -1,7 +1,7 @@
 const labels = {
-  toggle: 'Hide / show', share: 'Share', next: 'Next', more: 'More',
+  toggle: 'Hide / show', share: 'Send / share', next: 'Next', more: 'More',
   volumeDown: 'Volume down', playPause: 'Play / pause', volumeUp: 'Volume up',
-  opacityDown: 'Opacity down', previous: 'Previous', opacityUp: 'Opacity up', interact: 'Interact',
+  opacityDown: 'Opacity down', previous: 'Previous', opacityUp: 'Opacity up', interact: 'Unlock / move Reel',
   like: 'Like', unlike: 'Unlike', comment: 'Comment', save: 'Save / unsave'
 };
 let current;

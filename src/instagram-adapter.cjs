@@ -9,15 +9,17 @@ function bootstrap() {
     * { scrollbar-width: none !important; }
     *::-webkit-scrollbar { display: none !important; width: 0 !important; }
     html, body { background: #0b0d12 !important; }
-    #numpad-pilot-grip { position: fixed; z-index: 2147483647; top: 4px; right: 6px;
-      padding: 5px 10px; border-radius: 7px; color: white; background: #111c;
-      font: 600 11px system-ui; letter-spacing: .04em; -webkit-app-region: drag;
-      user-select: none; display: none; }
+    #numpad-pilot-grip { position: fixed; z-index: 2147483647; top: 4px; left: 8px; right: 8px;
+      height: 38px; align-items: center; justify-content: center; color: white; background: #252a33dc;
+      border: 1px solid #ffffff33; border-radius: 13px; box-shadow: 0 5px 20px #0005;
+      backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+      font: 700 11px system-ui; letter-spacing: .06em;
+      -webkit-app-region: drag; cursor: move; user-select: none; display: none; }
   `;
   document.head.appendChild(style);
   const grip = document.createElement('div');
   grip.id = 'numpad-pilot-grip';
-  grip.textContent = 'DRAG  ·  ESC TO FLY';
+  grip.textContent = 'DRAG TO MOVE  ·  ESC TO LOCK';
   document.body.appendChild(grip);
 
   function visibleArea(element) {
@@ -68,7 +70,7 @@ function bootstrap() {
     }
     const messages = document.querySelector('svg[aria-label="Messages"]')?.closest('[role="button"]');
     if (messages) messages.style.display = 'none';
-    grip.style.display = interaction ? 'block' : 'none';
+    grip.style.display = interaction ? 'flex' : 'none';
   }
 
   function setVolume(value) {
@@ -85,7 +87,12 @@ function bootstrap() {
     hideMobileBar();
     const video = activeVideo();
     if (name === 'status') return { ok: !!video, paused: video?.paused ?? true, playingCount: [...document.querySelectorAll('video')].filter(v => !v.paused).length, volume: desiredVolume, rect: videoRect(video), url: location.href };
-    if (name === 'interact') { interaction = !!value; hideMobileBar(); return { ok: true }; }
+    if (name === 'interact') {
+      interaction = !!(typeof value === 'object' ? value?.active : value);
+      const purpose = typeof value === 'object' && ['MOVE', 'COMMENT', 'SEND', 'MORE'].includes(value?.purpose) ? value.purpose : 'MOVE';
+      grip.textContent = `DRAG TO MOVE  ·  ${purpose}  ·  ESC TO LOCK`;
+      hideMobileBar(); return { ok: true };
+    }
     if (name === 'volumePreset') { desiredVolume = Math.max(0, Math.min(1, value)); if (video) video.volume = desiredVolume; return { ok: !!video, volume: desiredVolume }; }
     if (name === 'volume') return setVolume(value);
     if (name === 'hide') {
@@ -108,7 +115,7 @@ function bootstrap() {
     }
     const root = reelRoot(video);
     if (name === 'controls') return { ok: !!root, controls: Object.fromEntries(
-      ['Like', 'Unlike', 'Comment', 'Share', 'Save', 'Remove', 'Unsave', 'More']
+      ['Like', 'Unlike', 'Comment', 'Share', 'Send', 'Save', 'Remove', 'Unsave', 'More']
         .map(label => [label, !!buttonFor(root, [label])])) };
     if (name === 'like' || name === 'unlike') {
       const wanted = name === 'like' ? 'Like' : 'Unlike';
@@ -119,7 +126,7 @@ function bootstrap() {
       return { ok: true, changed: !!button };
     }
     if (name === 'save' || name === 'share' || name === 'more') {
-      const labels = name === 'save' ? ['Save', 'Remove', 'Unsave'] : name === 'share' ? ['Share'] : ['More'];
+      const labels = name === 'save' ? ['Save', 'Remove', 'Unsave'] : name === 'share' ? ['Share', 'Send'] : ['More'];
       const button = buttonFor(root, labels);
       if (!button) return { ok: false, error: `Instagram’s ${name} control was not found.` };
       button.click();
@@ -131,9 +138,13 @@ function bootstrap() {
       const wasPlaying = !video.paused;
       video.pause();
       button.click();
-      await new Promise(resolve => setTimeout(resolve, 900));
+      await new Promise(resolve => setTimeout(resolve, 650));
       const field = [...document.querySelectorAll('input,textarea,[contenteditable="true"]')]
-        .find(element => /add a comment/i.test(element.getAttribute('placeholder') || element.getAttribute('aria-label') || ''));
+        .find(element => {
+          const label = `${element.getAttribute('placeholder') || ''} ${element.getAttribute('aria-label') || ''}`;
+          const rect = element.getBoundingClientRect();
+          return rect.width > 30 && rect.height > 10 && /comment/i.test(label);
+        });
       field?.focus();
       return { ok: true, wasPlaying, fieldReady: !!field };
     }

@@ -22,11 +22,14 @@ const smoke = process.argv.includes('--smoke');
 const instagramCheck = process.argv.includes('--instagram-check');
 const integrationCheck = process.argv.includes('--integration-check');
 const actionCheck = process.argv.includes('--action-check');
-let overlay, reelView, settingsWindow, tray, config, configError = null;
+const toastCheck = process.argv.includes('--toast-check');
+if (toastCheck) app.setPath('userData', path.join(app.getPath('temp'), 'numpad-pilot-toast-check'));
+let overlay, reelView, settingsWindow, toastWindow, tray, config, configError = null;
 let quitting = false, mode = 'play', hidden = false, resumeAfterHide = false, resumeAfterComment = false;
 let lastGameHwnd = null, gameActive = false, hotkeySignature = '', hotkeyFailures = [], lastAction = 'Ready';
 let saveBoundsTimer, refreshTimer;
-let reelRect = null, cropTimer = null, playBounds = null, changingLayout = false;
+let reelRect = null, cropTimer = null, playBounds = null, interactionBounds = null, changingLayout = false;
+let toastHideTimer, toastExitTimer;
 const userData = () => app.getPath('userData');
 const configFile = () => configPath(userData());
 
@@ -94,7 +97,7 @@ function desiredActions() {
   return Object.keys(config.keys);
 }
 function refreshHotkeys(force = false) {
-  if (!config || smoke || instagramCheck || integrationCheck || actionCheck) return;
+  if (!config || smoke || instagramCheck || integrationCheck || actionCheck || toastCheck) return;
   const actions = desiredActions();
   const signature = JSON.stringify(actions.map(action => [action, config.keys[action]]));
   if (!force && signature === hotkeySignature) return;
@@ -140,7 +143,7 @@ async function showOverlay() {
   refreshCrop();
   notifyStatus('Reel visible'); refreshHotkeys(true);
 }
-async function enterInteraction(comment = false) {
+async function enterInteraction(comment = false, purpose = 'MOVE') {
   if (hidden) await showOverlay();
   const info = foregroundInfo();
   if (isGameForeground(info)) lastGameHwnd = info.hwnd;
@@ -155,18 +158,20 @@ async function enterInteraction(comment = false) {
   const bounds = overlay.getBounds();
   changingLayout = true;
   overlay.setBounds({ x: Math.min(bounds.x, area.x + area.width - width), y: Math.min(bounds.y, area.y + area.height - height), width, height });
+  interactionBounds = overlay.getBounds();
   reelView.setBounds({ x: 0, y: 0, width, height });
   setTimeout(() => { changingLayout = false; }, 100);
   overlay.setIgnoreMouseEvents(false); overlay.show(); overlay.focus();
-  await pageAction('interact', true);
+  await pageAction('interact', { active: true, purpose: comment ? 'COMMENT' : purpose });
   let result = { ok: true };
   if (comment) {
     result = await pageAction('comment');
     resumeAfterComment = !!result.wasPlaying;
     if (!result.ok) mode = 'interactive';
+    if (result.ok) showActionToast('comment', result.fieldReady);
   }
   notifyStatus(comment ? result.fieldReady ? 'Type and submit your comment; Escape returns to the game' :
-    'Comment field not found; use the clickable Instagram view' : 'Interaction mode; Escape returns to the game');
+    'Comment field not found; use the clickable Instagram view' : 'Reel unlocked: drag the top bar, then press Escape to lock it');
   refreshHotkeys(true);
   return result;
 }
@@ -174,13 +179,21 @@ async function leaveInteraction() {
   if (mode === 'play') return;
   const wasCommenting = mode === 'commenting'; mode = 'play';
   await pageAction('interact', false);
-  if (playBounds) { changingLayout = true; overlay.setBounds(playBounds); playBounds = null; }
+  if (playBounds) {
+    const moved = overlay.getBounds();
+    const dx = interactionBounds ? moved.x - interactionBounds.x : 0;
+    const dy = interactionBounds ? moved.y - interactionBounds.y : 0;
+    changingLayout = true;
+    overlay.setBounds(safeBounds({ ...playBounds, x: playBounds.x + dx, y: playBounds.y + dy }));
+    playBounds = null; interactionBounds = null;
+  }
   layoutCrop();
   overlay.setIgnoreMouseEvents(true, { forward: true });
+  config.bounds = overlay.getBounds(); persistConfig();
   if (wasCommenting && resumeAfterComment && (await pageAction('status')).paused) await pageAction('playPause');
   resumeAfterComment = false;
   if (lastGameHwnd) setForegroundWindow(lastGameHwnd);
-  notifyStatus('Playing mode'); refreshHotkeys(true);
+  notifyStatus('Reel locked in place'); refreshHotkeys(true);
 }
 async function perform(action) {
   if (!overlay || overlay.isDestroyed()) return;
@@ -188,6 +201,16 @@ async function perform(action) {
   if (hidden) return;
   if (action === 'interact') return mode === 'play' ? enterInteraction() : leaveInteraction();
   if (action === 'comment') return enterInteraction(true);
+  if (action === 'share' || action === 'more') {
+    await enterInteraction(false, action === 'share' ? 'SEND' : 'MORE');
+    const result = await pageAction(action);
+    if (result.ok) {
+      if (action === 'share') showActionToast('share', true);
+      notifyStatus(action === 'share' ? 'Choose and send in Instagram; Escape returns to the game' :
+        'More options open; Escape returns to the game');
+    }
+    return;
+  }
   if (action === 'next' || action === 'previous') {
     const keyCode = action === 'next' ? 'Down' : 'Up';
     reelView.webContents.sendInputEvent({ type: 'keyDown', keyCode });
@@ -200,17 +223,17 @@ async function perform(action) {
     overlay.setOpacity(config.opacity); persistConfig(); notifyStatus(`Opacity ${Math.round(config.opacity * 100)}%`); return;
   }
   if (action === 'volumeDown' || action === 'volumeUp') {
-    config.volume = Math.min(1, Math.max(0, Math.round((config.volume + (action === 'volumeUp' ? 0.1 : -0.1)) * 100) / 100));
+    config.volume = Math.min(1, Math.max(0, Math.round((config.volume + (action === 'volumeUp' ? 0.02 : -0.02)) * 100) / 100));
     reelView.webContents.setAudioMuted(false); await pageAction('volume', config.volume);
     persistConfig(); notifyStatus(`Reel volume ${Math.round(config.volume * 100)}%`); return;
   }
-  if (['playPause', 'like', 'unlike', 'save', 'share', 'more'].includes(action)) {
+  if (['playPause', 'like', 'unlike', 'save'].includes(action)) {
     const result = await pageAction(action);
     if (result.ok) {
-      if (action === 'share' || action === 'more') await enterInteraction();
       notifyStatus(action === 'playPause' ? result.paused ? 'Paused' : 'Playing' :
         action === 'like' || action === 'unlike' ? `${action === 'like' ? 'Liked' : 'Unliked'}${result.changed ? '' : ' already'}` :
-        action === 'save' ? 'Save toggled' : `${action === 'share' ? 'Share' : 'More'} opened`);
+        'Save toggled');
+      if (action === 'like' || action === 'unlike') showActionToast(action, result.changed);
     }
   }
 }
@@ -222,11 +245,37 @@ function showSettings() {
   settingsWindow.on('focus', () => refreshHotkeys(true));
   settingsWindow.on('closed', () => { settingsWindow = null; refreshHotkeys(true); });
 }
+let toastReady;
+function createToastWindow() {
+  if (toastWindow && !toastWindow.isDestroyed()) return toastReady;
+  const area = screen.getPrimaryDisplay().workArea;
+  toastWindow = new BrowserWindow({
+    x: area.x + area.width - 274, y: area.y + 54, width: 250, height: 78,
+    frame: false, transparent: true, resizable: false, movable: false,
+    alwaysOnTop: true, focusable: false, skipTaskbar: true, show: false,
+    backgroundColor: '#00000000',
+    webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true }
+  });
+  toastWindow.setIgnoreMouseEvents(true, { forward: true });
+  toastReady = toastWindow.loadFile(path.join(__dirname, 'toast.html'));
+  return toastReady;
+}
+async function showActionToast(action, changed) {
+  try {
+    await createToastWindow();
+    if (!toastWindow || toastWindow.isDestroyed()) return;
+    clearTimeout(toastHideTimer); clearTimeout(toastExitTimer);
+    toastWindow.showInactive();
+    await toastWindow.webContents.executeJavaScript(`window.renderToast(${JSON.stringify(action)}, ${!!changed})`, true);
+    toastExitTimer = setTimeout(() => toastWindow?.webContents.executeJavaScript('window.dismissToast()', true).catch(() => {}), 1500);
+    toastHideTimer = setTimeout(() => { if (toastWindow && !toastWindow.isDestroyed()) toastWindow.hide(); }, 1900);
+  } catch (error) { console.error(`Toast could not be shown: ${error.message}`); }
+}
 function updateTray() {
   if (!tray) return;
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: hidden ? 'Show Reel' : 'Hide Reel', click: () => perform('toggle') },
-    { label: mode === 'play' ? 'Interaction mode' : 'Return to game', click: () => perform('interact') },
+    { label: mode === 'play' ? 'Unlock / move Reel' : 'Lock Reel / return to game', click: () => perform('interact') },
     { label: 'Settings', click: showSettings }, { type: 'separator' },
     { label: 'Quit', click: () => { quitting = true; app.quit(); } }
   ]));
@@ -323,10 +372,22 @@ async function runIntegrationCheck() {
   reelView.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Down' });
   await new Promise(resolve => setTimeout(resolve, 1500));
   const afterUrl = reelView.webContents.getURL();
+  const originalPlayBounds = overlay.getBounds();
   const comment = await enterInteraction(true);
   const commentView = overlay.getBounds();
+  overlay.setPosition(commentView.x - 24, commentView.y + 20);
   await leaveInteraction();
+  const movedBounds = overlay.getBounds();
+  const movePassed = movedBounds.x === originalPlayBounds.x - 24 && movedBounds.y === originalPlayBounds.y + 20 &&
+    config.bounds.x === movedBounds.x && config.bounds.y === movedBounds.y;
+  overlay.setBounds(originalPlayBounds); config.bounds = originalPlayBounds; persistConfig();
   const volume = await pageAction('volume', 0.4);
+  const previousVolume = config.volume;
+  await perform('volumeUp');
+  const steppedVolume = config.volume;
+  await perform('volumeDown');
+  const volumeStepPassed = steppedVolume === Math.min(1, Math.round((previousVolume + 0.02) * 100) / 100) &&
+    config.volume === previousVolume;
   const hide = await pageAction('hide');
   reelView.webContents.setAudioMuted(true);
   overlay.hide();
@@ -339,8 +400,8 @@ async function runIntegrationCheck() {
   overlay.setOpacity(config.opacity);
   const passed = !!(crop.rect && initial.ok && controls.ok &&
     ['Like', 'Comment', 'Share', 'Save', 'More'].every(name => controls.controls[name]) &&
-    comment.ok && comment.fieldReady && volume.ok && !hiddenState.visible && hiddenState.muted && show.ok && opacity === 0.65);
-  console.log(JSON.stringify({ passed, crop, initial, controls, comment, commentView, volume, hiddenState, show, opacity, navigationChanged: beforeUrl !== afterUrl }));
+    comment.ok && comment.fieldReady && movePassed && volume.ok && volumeStepPassed && !hiddenState.visible && hiddenState.muted && show.ok && opacity === 0.65);
+  console.log(JSON.stringify({ passed, crop, initial, controls, comment, commentView, movePassed, movedBounds, volume, volumeStepPassed, hiddenState, show, opacity, navigationChanged: beforeUrl !== afterUrl }));
   if (passed) app.quit(); else app.exit(1);
 }
 async function runActionCheck() {
@@ -360,10 +421,23 @@ async function runActionCheck() {
   console.log(JSON.stringify({ share, shareOpen, more, moreOpen }));
   app.quit();
 }
+async function runToastCheck() {
+  try {
+    const directory = path.join(__dirname, '..', 'work');
+    fs.mkdirSync(directory, { recursive: true });
+    for (const action of ['like', 'unlike', 'comment', 'share']) {
+      await showActionToast(action, true);
+      await new Promise(resolve => setTimeout(resolve, 450));
+      fs.writeFileSync(path.join(directory, `toast-${action}.png`), (await toastWindow.webContents.capturePage()).toPNG());
+    }
+    app.quit();
+  } catch (error) { console.error(`Toast check failed: ${error.message}`); app.exit(1); }
+}
 app.on('second-instance', () => { if (hidden) showOverlay(); else showSettings(); });
 app.whenReady().then(async () => {
   const loaded = loadConfig(userData()); config = loaded.config; configError = loaded.error;
   if (loaded.error) console.error(loaded.error); else if (!fs.existsSync(configFile())) persistConfig();
+  if (toastCheck) { await runToastCheck(); return; }
   createOverlay();
   if (smoke || instagramCheck || integrationCheck || actionCheck) {
     reelView.webContents.once('did-finish-load', () => setTimeout(smoke ? runSmoke : integrationCheck ? runIntegrationCheck : actionCheck ? runActionCheck : runInstagramCheck, 500));
@@ -373,6 +447,6 @@ app.whenReady().then(async () => {
   refreshTimer = setInterval(pollForeground, 400); pollForeground();
   if (configError) notifyStatus(configError, true);
 });
-app.on('before-quit', () => { quitting = true; clearTimeout(saveBoundsTimer); clearInterval(refreshTimer); clearInterval(cropTimer); });
+app.on('before-quit', () => { quitting = true; clearTimeout(saveBoundsTimer); clearTimeout(toastHideTimer); clearTimeout(toastExitTimer); clearInterval(refreshTimer); clearInterval(cropTimer); });
 app.on('will-quit', () => globalShortcut.unregisterAll());
 app.on('window-all-closed', () => { if (quitting || !tray) app.quit(); });
