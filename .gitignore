@@ -3,3 +3,22 @@ dist/
 .cache/
 *.log
 work/
+# Local sign-in data, settings, and credentials must never be committed.
+.env
+.env.*
+!.env.example
+config.json
+settings.json
+user-data/
+profile/
+Cookies
+Login Data
+Local State
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+*.pem
+*.p12
+*.pfx
+*.key
