@@ -3,6 +3,8 @@ function bootstrap() {
 
   let desiredVolume = 0.5;
   let interaction = false;
+  let moving = false;
+  let feedbackTimer;
   const style = document.createElement('style');
   style.id = 'numpad-pilot-style';
   style.textContent = `
@@ -15,12 +17,32 @@ function bootstrap() {
       backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
       font: 700 11px system-ui; letter-spacing: .06em;
       -webkit-app-region: drag; cursor: move; user-select: none; display: none; }
+    #numpad-pilot-move-hint, #numpad-pilot-feedback { position: fixed; z-index: 2147483647;
+      pointer-events: none; color: white; background: #1b2029d9; border: 1px solid #ffffff55;
+      border-radius: 999px; box-shadow: 0 4px 14px #0005; backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px); white-space: nowrap; display: none; }
+    #numpad-pilot-move-hint { padding: 6px 9px; font: 700 10px system-ui; letter-spacing: .03em; }
+    #numpad-pilot-feedback { padding: 6px 10px; font: 700 11px system-ui; }
+    #numpad-pilot-feedback.visible { display: block; animation: np-feedback 1150ms ease-out forwards; }
+    @keyframes np-feedback {
+      0% { opacity: 0; transform: translate(-100%, -6px) scale(.92); }
+      18% { opacity: 1; transform: translate(-100%, 0) scale(1.04); }
+      30%, 75% { opacity: 1; transform: translate(-100%, 0) scale(1); }
+      100% { opacity: 0; transform: translate(-100%, -4px) scale(.98); }
+    }
   `;
   document.head.appendChild(style);
   const grip = document.createElement('div');
   grip.id = 'numpad-pilot-grip';
   grip.textContent = 'DRAG TO MOVE  ·  ESC TO LOCK';
   document.body.appendChild(grip);
+  const moveHint = document.createElement('div');
+  moveHint.id = 'numpad-pilot-move-hint';
+  moveHint.textContent = 'MOVE  ·  8/2/4/6  ·  . DONE';
+  document.body.appendChild(moveHint);
+  const feedback = document.createElement('div');
+  feedback.id = 'numpad-pilot-feedback';
+  document.body.appendChild(feedback);
 
   function visibleArea(element) {
     const rect = element.getBoundingClientRect();
@@ -71,6 +93,37 @@ function bootstrap() {
     const messages = document.querySelector('svg[aria-label="Messages"]')?.closest('[role="button"]');
     if (messages) messages.style.display = 'none';
     grip.style.display = interaction ? 'flex' : 'none';
+    positionDecorations();
+  }
+
+  function positionDecorations() {
+    const video = activeVideo();
+    if (!video) { moveHint.style.display = 'none'; feedback.classList.remove('visible'); return; }
+    const rect = video.getBoundingClientRect();
+    moveHint.style.left = `${rect.left + 9}px`;
+    moveHint.style.top = `${rect.top + 10}px`;
+    moveHint.style.display = moving ? 'block' : 'none';
+    feedback.style.left = `${rect.right - 9}px`;
+    feedback.style.top = `${rect.top + 13}px`;
+  }
+
+  function showFeedback(value) {
+    value = value || {};
+    const labels = {
+      like: value.changed ? '♥  Liked' : '♥  Already liked',
+      unlike: value.changed ? '♡  Unliked' : '♡  Not liked',
+      comment: value.changed ? '✎  Comment ready' : '✎  Comment view',
+      share: '↗  Send options'
+    };
+    if (!Object.hasOwn(labels, value?.kind) || !activeVideo()) return { ok: false, error: 'Reel feedback unavailable.' };
+    feedback.textContent = labels[value.kind];
+    positionDecorations();
+    feedback.classList.remove('visible');
+    void feedback.offsetWidth;
+    feedback.classList.add('visible');
+    clearTimeout(feedbackTimer);
+    feedbackTimer = setTimeout(() => feedback.classList.remove('visible'), 1200);
+    return { ok: true, inWindow: true, text: feedback.textContent };
   }
 
   function setVolume(value) {
@@ -87,9 +140,11 @@ function bootstrap() {
     hideMobileBar();
     const video = activeVideo();
     if (name === 'status') return { ok: !!video, paused: video?.paused ?? true, playingCount: [...document.querySelectorAll('video')].filter(v => !v.paused).length, volume: desiredVolume, rect: videoRect(video), url: location.href };
+    if (name === 'moveMode') { moving = !!value; positionDecorations(); return { ok: true, moving }; }
+    if (name === 'feedback') return showFeedback(value);
     if (name === 'interact') {
       interaction = !!(typeof value === 'object' ? value?.active : value);
-      const purpose = typeof value === 'object' && ['MOVE', 'COMMENT', 'SEND', 'MORE'].includes(value?.purpose) ? value.purpose : 'MOVE';
+      const purpose = typeof value === 'object' && ['CONTROLS', 'COMMENT', 'SEND', 'MORE'].includes(value?.purpose) ? value.purpose : 'CONTROLS';
       grip.textContent = `DRAG TO MOVE  ·  ${purpose}  ·  ESC TO LOCK`;
       hideMobileBar(); return { ok: true };
     }

@@ -15,15 +15,15 @@ npm ci
 npm run dist:win
 ```
 
-Then open `dist\Numpad Pilot Setup 0.1.1.exe`. To run the source directly, use `npm start` after `npm ci`.
+Then open `dist\Numpad Pilot Setup 0.1.2.exe`. To run the source directly, use `npm start` after `npm ci`.
 
 ## First use
 
-Sign in directly in the Instagram window if prompted. Your login stays in Electron's persistent local browser session. The project does not request or store your Instagram password. If the play view is cropped before you sign in, use numpad decimal to open interaction mode, then sign in. The tray icon provides Settings and Quit.
+Sign in directly in the Instagram window if prompted. Your login stays in Electron's persistent local browser session. The project does not request or store your Instagram password. If the play view is cropped before you sign in, choose **Open Instagram view** from the tray menu, then sign in. The tray menu also provides Settings and Quit.
 
 If you used the earlier Reel Overlay build, Numpad Pilot copies its local profile on first launch so your Instagram sign-in and settings carry over. The original profile remains in place as a backup.
 
-Exclusive fullscreen may cover ordinary desktop windows. The overlay starts near the right edge and passes mouse input through during play. Press numpad decimal to unlock the Reel, drag the bar across its top to move it, then press Escape or decimal again to lock its new position and return to the game. The window remembers where you put it.
+Exclusive fullscreen may cover ordinary desktop windows. The overlay starts near the right edge and passes mouse input through during play. Press numpad decimal to enter move mode. The Reel stays cropped and War Thunder keeps focus. Use numpad 8 / 2 / 4 / 6 to move it up / down / left / right in 24-pixel steps, then press decimal again to save its position. Those four keys move the window instead of controlling playback while move mode is active.
 
 | Key | Action |
 | --- | --- |
@@ -38,12 +38,12 @@ Exclusive fullscreen may cover ordinary desktop windows. The overlay starts near
 | Numpad 1 | Open Instagram's Send / Share controls |
 | Numpad 3 | Open More controls |
 | Numpad 0 | Hide / show |
-| Numpad decimal | Unlock / lock the Reel for moving and interaction |
-| Escape | Lock the Reel and return focus to War Thunder |
+| Numpad decimal | Enter / leave move mode without leaving the game |
+| Escape | Close the Comment / Send view and return focus to War Thunder |
 
 Comment opens and focuses Instagram's comment field. Send / Share and More expand the view before opening Instagram's controls so their menus remain usable. A short, translucent cue confirms that each view opened. You type comments, choose recipients, and submit in Instagram; nothing is sent automatically. Press Escape to return to the game. Hiding pauses and mutes the Reel. Showing restores the configured volume and resumes only if it was playing before hide. While hidden, only the show shortcut remains reserved; the other numpad keys return to the game.
 
-Like and Unlike show a brief confirmation on the right side of the screen. The animation does not steal focus or mouse input from the game.
+Like, Unlike, Comment, and Send show a small brief cue inside the Reel window. It does not take focus or mouse input from the game.
 
 Shortcuts are registered while War Thunder or the overlay is focused. Detection uses the foreground window title; the default match is `War Thunder`. If Windows or another application has reserved a key, Settings reports which shortcut could not be registered. Change shortcuts, opacity, volume, title match, and window position in Settings or the local `config.json` opened from Settings. Keep shortcuts unique. With Num Lock off, some numpad accelerators may behave differently; verify your own keyboard.
 
